@@ -7,7 +7,7 @@ KNN Regression Questions 1 and 2
 
 Edited on Mon Jan 15, 2018
 
-@author: Krist Papadopoulos, Logan Rock, Yu Liu
+@author: Krist Papadopoulos, Logan Rooks, Yu Liu
 """
 
 import numpy as np
@@ -107,19 +107,20 @@ if __name__ == '__main__':
             
             for K in k_list:
                 print("\nFor k = {}:".format(K))
+                
                 for data, target, name in zip(data_set, target_set, set_names):
+                    #for each k, print the squared loss of the train, validate and test dataset
                     print("For the {} set:".format(name))
                     error = sess.run(loss, feed_dict={X: trainData, y: trainTarget, X_pred: data, y_true: target, k: K})
                     print(error)
             
                 X_Data = np.linspace(0.0, 11.0, num=1000)[:,np.newaxis]
-            
                 Pred = (sess.run(y_pred, feed_dict={X: trainData, y: trainTarget, X_pred: X_Data, k: K}))
                 
-                plt.title('KNN Regression Predictions')
+                plt.title('KNN Regression Predictions on data1D, k={}'.format(K))
                 plt.xlabel('X')
                 plt.ylabel('Y')
                 plt.grid(True)
                 plt.scatter(x=Data, y=Target)
-                plt.step(x=X_Data, y=Pred,c='r')
+                plt.step(x=X_Data, y=Pred, c='r')
                 plt.show()
