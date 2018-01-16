@@ -88,7 +88,7 @@ def data_segmentation(data_path, target_path, task):
 
 if __name__ == '__main__':
     # set up data
-    test_mode = 0   # 0 for facial recognition, 1 for gender, 2 for a toy test case
+    test_mode = 1   # 0 for facial recognition, 1 for gender, 2 for a toy test case
     if test_mode == 2: # toy data test case, with D=2
         trainData = [[1,1],[2,2],[1,3],[3,3],[4,4],[4,2]]
         trainTarget = [1, 1, 1, 0, 0, 0]
@@ -114,17 +114,23 @@ if __name__ == '__main__':
     init = tf.global_variables_initializer()
     sess.run(init)
     
-    # run validation to select K 
-    K_list = (1, 5, 10, 25, 50, 100, 200)
-    for K in K_list: 
+    if test_mode == 2: 
+        K = 3
         valid_estimate =  predLabel(valid_data, train_data, train_target, K)        
         # loss function: count the total # of misclassifications
         loss = tf.count_nonzero(tf.not_equal(valid_estimate, valid_target))
         print("\nFor k = {}, there are {} misclassifications".format(K,sess.run(loss)))
-          
-    # test with the k selected from validation 
-    K_best=1
-    test_estimate =  predLabel(test_data, train_data, train_target, K_best)  
-    loss = tf.count_nonzero(tf.not_equal(test_estimate, test_target))
-    print("\nFor k = {}, there are {} misclassifications".format(K_best,sess.run(loss)))
+    else: 
+        # run validation to select K 
+        K_list = (1, 5, 10, 25, 50, 100, 200)
+        for K in K_list: 
+            valid_estimate =  predLabel(valid_data, train_data, train_target, K) 
+            loss = tf.count_nonzero(tf.not_equal(valid_estimate, valid_target))
+            print("\nFor k = {}, there are {} misclassifications".format(K,sess.run(loss)))
+              
+        # test with the k selected from validation 
+        K_best=1
+        test_estimate =  predLabel(test_data, train_data, train_target, K_best)  
+        loss = tf.count_nonzero(tf.not_equal(test_estimate, test_target))
+        print("\nFor k = {}, there are {} misclassifications".format(K_best,sess.run(loss)))
        
