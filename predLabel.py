@@ -87,35 +87,44 @@ def data_segmentation(data_path, target_path, task):
     return trainData, validData, testData, trainTarget, validTarget, testTarget     
 
 if __name__ == '__main__':
-    # setting up data
-    test_mode = 1   # 0 for facial recognition, 1 for gender, 2 for toy test case
+    # set up data
+    test_mode = 0   # 0 for facial recognition, 1 for gender, 2 for a toy test case
     if test_mode == 2: # toy data test case, with D=2
         trainData = [[1,1],[2,2],[1,3],[3,3],[4,4],[4,2]]
         trainTarget = [1, 1, 1, 0, 0, 0]
         validData = [[1,2],[4,3],[1,2],[4,1]]
         validTarget=[1, 0, 1, 0]
+        testData = [[2,1]]
+        testTarget = [1]
     else: 
         trainData, validData, testData, trainTarget, validTarget, testTarget \
             = data_segmentation('./data.npy', './target.npy', test_mode)
 
-    # building graph
+    # build graph
     # cannot use a placeholder because of the line test_targets = tf.zeros(target_shape,tf.int32)
     train_data = tf.Variable(trainData, dtype=tf.float32)
     train_target = tf.Variable(trainTarget, dtype=tf.int32)
     valid_data = tf.Variable(validData, dtype=tf.float32)
     valid_target = tf.Variable(validTarget, dtype=tf.int32)
+    test_data = tf.Variable(testData, dtype=tf.float32)
+    test_target = tf.Variable(testTarget, dtype=tf.int32)
     
-    # starting session 
+    # start session 
     sess = tf.InteractiveSession()
     init = tf.global_variables_initializer()
     sess.run(init)
     
-    # run KNN 
-    K = 5
-    valid_estimate =  predLabel(valid_data, train_data, train_target, K)
-    # print(sess.run(valid_estimate))
-    
-    # loss function: count the total # of err
-    loss = tf.count_nonzero(tf.not_equal(valid_estimate, valid_target))
-    print(sess.run(loss))
-    
+    # run validation to select K 
+    K_list = (1, 5, 10, 25, 50, 100, 200)
+    for K in K_list: 
+        valid_estimate =  predLabel(valid_data, train_data, train_target, K)        
+        # loss function: count the total # of misclassifications
+        loss = tf.count_nonzero(tf.not_equal(valid_estimate, valid_target))
+        print("\nFor k = {}, there are {} misclassifications".format(K,sess.run(loss)))
+          
+    # test with the k selected from validation 
+    K_best=1
+    test_estimate =  predLabel(test_data, train_data, train_target, K_best)  
+    loss = tf.count_nonzero(tf.not_equal(test_estimate, test_target))
+    print("\nFor k = {}, there are {} misclassifications".format(K_best,sess.run(loss)))
+       
