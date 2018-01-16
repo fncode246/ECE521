@@ -51,7 +51,9 @@ def predLabel(test_data, train_data, train_target, K):
     #-get the k nearest distances, -1*distances b/c tf.nn.top_k() finds the greatest k distances   
     nearest_k_train_values, nearest_k_indices = tf.nn.top_k(-1*distances, k=K)
     
-    # for each test data point
+    # for each test data point, use for loop b/c tf.unique_with_counts takes 1D input only
+    target_shape = [test_data.shape[0],1]
+    test_targets = tf.zeros(target_shape,tf.int32)
     for i in range(sess.run(tf.shape(test_data)[0])):
         # get the nearest k training targets for each test data point
         nearest_k_targets = tf.gather(train_target,nearest_k_indices[i,:])  
@@ -59,12 +61,11 @@ def predLabel(test_data, train_data, train_target, K):
         targets, idx, counts = tf.unique_with_counts(tf.reshape(nearest_k_targets,shape=[-1]))
         # find the target with the higheset occurence in nearest_k_targets
         max_count, max_count_idx=tf.nn.top_k(counts, k=1)
-        # append the most frequent occuring target to the output target vector
-        if i==0:
-            test_target = tf.gather(targets,max_count_idx)
-        else: 
-            test_target = tf.concat([test_target, tf.gather(targets,max_count_idx)],0)
-    return tf.expand_dims(test_target,1)
+        # the most frequent occuring target to the output target vector
+        test_target = tf.gather(targets,max_count_idx)
+        sparse_test_target = tf.SparseTensor([[i,0]], test_target, target_shape)
+        test_targets = tf.add(test_targets, tf.sparse_tensor_to_dense(sparse_test_target))        
+    return test_targets
      
 
 if __name__ == '__main__':
@@ -86,7 +87,4 @@ if __name__ == '__main__':
     K = 3
     valid_estimate =  predLabel(valid_data, train_data, train_target, K)
     print(sess.run(valid_estimate))
-
-
-
-        
+    
