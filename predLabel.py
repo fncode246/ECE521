@@ -32,7 +32,6 @@ def D_euc(X, Z):
     distance = X_norm + Z_norm - 2*tf.matmul(X,tf.transpose(Z))
     return distance
 
-
 def predLabel(test_data, train_data, train_target, K):
         
     '''
@@ -40,10 +39,10 @@ def predLabel(test_data, train_data, train_target, K):
             K: the parameter k for KNN
             train_data: N1 X D, with N1 training data points, and each point 
                 contains D features
-            train_target: 1 X D, with targets for the training data points 
+            train_target: D dim vector, with targets for the training data points 
             test_data: N2 X D, with N2 test data points
     Output:
-            test_target: N2 X 1, with targets for the test data points
+            test_target: N2 dim vector, with targets for the test data points
             
     '''
     # compute the distances between train and test data points
@@ -51,10 +50,11 @@ def predLabel(test_data, train_data, train_target, K):
     #-get the k nearest distances, -1*distances b/c tf.nn.top_k() finds the greatest k distances   
     nearest_k_train_values, nearest_k_indices = tf.nn.top_k(-1*distances, k=K)
     
-    # for each test data point, use for loop b/c tf.unique_with_counts takes 1D input only
-    target_shape = [test_data.shape[0],1]
+    # for each test data point
+    # use for-loop b/c tf.unique_with_counts() takes 1D input only
+    target_shape = [test_data.shape[0]]
     test_targets = tf.zeros(target_shape,tf.int32)
-    for i in range(sess.run(tf.shape(test_data)[0])):
+    for i in range(test_data.shape[0]):
         # get the nearest k training targets for each test data point
         nearest_k_targets = tf.gather(train_target,nearest_k_indices[i,:])  
         # tally the targets of the nearest k training data
@@ -63,28 +63,59 @@ def predLabel(test_data, train_data, train_target, K):
         max_count, max_count_idx=tf.nn.top_k(counts, k=1)
         # the most frequent occuring target to the output target vector
         test_target = tf.gather(targets,max_count_idx)
-        sparse_test_target = tf.SparseTensor([[i,0]], test_target, target_shape)
+        sparse_test_target = tf.SparseTensor([[i,]], test_target, target_shape)
         test_targets = tf.add(test_targets, tf.sparse_tensor_to_dense(sparse_test_target))        
     return test_targets
-     
+    
+def data_segmentation(data_path, target_path, task):
+    # task = 0 >> select the name ID targets for face recognition task
+    # task = 1 >> select the gender ID targets for gender recognition task
+    data = np.load(data_path)/255
+    data = np.reshape(data, [-1, 32*32])
+    target = np.load(target_path)
+    np.random.seed(45689)
+    rnd_idx = np.arange(np.shape(data)[0])
+    np.random.shuffle(rnd_idx)
+    trBatch = int(0.8*len(rnd_idx))
+    validBatch = int(0.1*len(rnd_idx))
+    trainData, validData, testData = data[rnd_idx[1:trBatch],:], \
+    data[rnd_idx[trBatch+1:trBatch + validBatch],:],\
+    data[rnd_idx[trBatch + validBatch+1:-1],:]
+    trainTarget, validTarget, testTarget = target[rnd_idx[1:trBatch], task], \
+    target[rnd_idx[trBatch+1:trBatch + validBatch], task],\
+    target[rnd_idx[trBatch + validBatch + 1:-1], task]
+    return trainData, validData, testData, trainTarget, validTarget, testTarget     
 
 if __name__ == '__main__':
-    # toy data test case, with D=2
-    trainData = [[1,1],[2,2],[1,3],[3,3],[4,4],[4,2]]
-    trainTarget = [[1],[1],[1],[0],[0],[0]]
-    validData = [[2,4],[4,3],[1,2],[4,1]]
-    validTarget=[[1],[0],[1],[0]]
+    # setting up data
+    test_mode = 1   # 0 for facial recognition, 1 for gender, 2 for toy test case
+    if test_mode == 2: # toy data test case, with D=2
+        trainData = [[1,1],[2,2],[1,3],[3,3],[4,4],[4,2]]
+        trainTarget = [1, 1, 1, 0, 0, 0]
+        validData = [[1,2],[4,3],[1,2],[4,1]]
+        validTarget=[1, 0, 1, 0]
+    else: 
+        trainData, validData, testData, trainTarget, validTarget, testTarget \
+            = data_segmentation('./data.npy', './target.npy', test_mode)
 
+    # building graph
+    # cannot use a placeholder because of the line test_targets = tf.zeros(target_shape,tf.int32)
     train_data = tf.Variable(trainData, dtype=tf.float32)
     train_target = tf.Variable(trainTarget, dtype=tf.int32)
     valid_data = tf.Variable(validData, dtype=tf.float32)
     valid_target = tf.Variable(validTarget, dtype=tf.int32)
     
+    # starting session 
     sess = tf.InteractiveSession()
     init = tf.global_variables_initializer()
     sess.run(init)
     
-    K = 3
+    # run KNN 
+    K = 5
     valid_estimate =  predLabel(valid_data, train_data, train_target, K)
-    print(sess.run(valid_estimate))
+    # print(sess.run(valid_estimate))
+    
+    # loss function: count the total # of err
+    loss = tf.count_nonzero(tf.not_equal(valid_estimate, valid_target))
+    print(sess.run(loss))
     
