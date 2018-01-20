@@ -8,6 +8,7 @@ Created on Mon Jan 15 10:20:16 2018
 
 import numpy as np
 import tensorflow as tf
+from PIL import Image
 
 def D_euc(X, Z):
     
@@ -31,7 +32,7 @@ def D_euc(X, Z):
     Z_norm = tf.reshape(tf.reduce_sum(Z**2, axis=1), [1,-1])
     distance = X_norm + Z_norm - 2*tf.matmul(X,tf.transpose(Z))
     return distance
-
+    
 def predLabel(test_data, train_data, train_target, K):
         
     '''
@@ -88,8 +89,8 @@ def data_segmentation(data_path, target_path, task):
 
 if __name__ == '__main__':
     # set up data
-    test_mode = 1   # 0 for facial recognition, 1 for gender, 2 for a toy test case
-    if test_mode == 2: # toy data test case, with D=2
+    test_mode = 1       # 0 for facial recognition, 1 for gender, 2 for a toy test case
+    if test_mode == 2:  # toy data test case, with D=2
         trainData = [[1,1],[2,2],[1,3],[3,3],[4,4],[4,2]]
         trainTarget = [1, 1, 1, 0, 0, 0]
         validData = [[1,2],[4,3],[1,2],[4,1]]
@@ -120,7 +121,7 @@ if __name__ == '__main__':
         # loss function: count the total # of misclassifications
         loss = tf.count_nonzero(tf.not_equal(valid_estimate, valid_target))
         print("\nFor k = {}, there are {} misclassifications".format(K,sess.run(loss)))
-    else: 
+    else:
         # run validation to select K 
         K_list = (1, 5, 10, 25, 50, 100, 200)
         for K in K_list: 
@@ -133,4 +134,20 @@ if __name__ == '__main__':
         test_estimate =  predLabel(test_data, train_data, train_target, K_best)  
         loss = tf.count_nonzero(tf.not_equal(test_estimate, test_target))
         print("\nFor k = {}, there are {} misclassifications".format(K_best,sess.run(loss)))
+                    
+        # analysis of misclassifications for K=10
+        test_estimate =  predLabel(test_data, train_data, train_target, 10) 
+        # get the first instance of misclassification 
+        mis_idx = tf.where(tf.not_equal(test_estimate, test_target))[0]
+        # get the 10 nearest neighbor training data of this failed test case 
+        distances = D_euc(tf.gather(test_data,mis_idx), train_data) 
+        nearest_k_train_values, nearest_k_indices = tf.nn.top_k(-1*distances, k=10)
+        # save the failed test data and its neighbor training data as images 
+        img = Image.fromarray(255*sess.run(tf.reshape(tf.gather(test_data,mis_idx),\
+                                                      [32, 32]))).convert('LA')
+        img.save('failed_case.png')
+        for j in range(10):
+            img = Image.fromarray(255*sess.run(tf.reshape(tf.gather(\
+                 train_data,nearest_k_indices[:,j]), [32, 32]))).convert('LA')
+            img.save('failed_case_neighbour'+str(j+1)+'.png')
        
