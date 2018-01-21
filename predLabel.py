@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """
+ECE521 Assignment 1 Part 3 - classification
+
 Created on Mon Jan 15 10:20:16 2018
 
 @author: Helena
@@ -8,30 +10,8 @@ Created on Mon Jan 15 10:20:16 2018
 
 import numpy as np
 import tensorflow as tf
+from knn_regression_RM import dist_euclid
 from PIL import Image
-
-def D_euc(X, Z):
-    
-    '''
-    Code from Krist:
-        
-    Compute squared Euclidean L2 distance between tensor X and tensor Z
-         
-    Input: X is an N1 X D tensor, Z is is a N2 X D tensor 
-    Output: ||X-Z||2/2 distance is a N1 X N2 tensor containing pairwise squared Euclidean distances
-    
-    X = tf.constant([[3, 4, 5], [5, 1, 1]])
-    
-    Z = tf.constant([[2, 4, 5], [1, 1, 1], [6,1,8]])
-    
-    D_euc(X,Z) = [[ 1 29 27]
-                [34 16 50]]
-    
-    '''
-    X_norm = tf.reshape(tf.reduce_sum(X**2,axis=1), [-1,1])
-    Z_norm = tf.reshape(tf.reduce_sum(Z**2, axis=1), [1,-1])
-    distance = X_norm + Z_norm - 2*tf.matmul(X,tf.transpose(Z))
-    return distance
     
 def predLabel(test_data, train_data, train_target, K):
         
@@ -47,7 +27,7 @@ def predLabel(test_data, train_data, train_target, K):
             
     '''
     # compute the distances between train and test data points
-    distances = D_euc(test_data, train_data) 
+    distances = dist_euclid(test_data, train_data) 
     #-get the k nearest distances, -1*distances b/c tf.nn.top_k() finds the greatest k distances   
     nearest_k_train_values, nearest_k_indices = tf.nn.top_k(-1*distances, k=K)
     
@@ -140,7 +120,7 @@ if __name__ == '__main__':
         # get the first instance of misclassification 
         mis_idx = tf.where(tf.not_equal(test_estimate, test_target))[0]
         # get the 10 nearest neighbor training data of this failed test case 
-        distances = D_euc(tf.gather(test_data,mis_idx), train_data) 
+        distances = dist_euclid(tf.gather(test_data,mis_idx), train_data) 
         nearest_k_train_values, nearest_k_indices = tf.nn.top_k(-1*distances, k=10)
         # save the failed test data and its neighbor training data as images 
         img = Image.fromarray(255*sess.run(tf.reshape(tf.gather(test_data,mis_idx),\
