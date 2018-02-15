@@ -37,7 +37,7 @@ with np.load("notMNIST.npz") as data :
 #Define parameters used in the model
 learning_rates = [0.001]
 regularization = 0.01
-iterations = 500
+iterations = 5000
 batchSize = 500
 
 total_batches = int(len(trainData_rs)/batchSize)
@@ -59,12 +59,11 @@ with LR_1_1.as_default():
     
     w = tf.Variable(tf.zeros([784, 1]), name="w")        
     b = tf.Variable(tf.zeros([1]), name="b")       
-    y_pred = tf.sigmoid(tf.matmul(X_batch, w) + b)
-    y_val_pred = tf.sigmoid(tf.matmul(X_val, w) + b)
+    y_pred = tf.matmul(X_batch, w) + b
 
     learning_rate = tf.placeholder(tf.float32, name="learning-rate")
    
-    loss=tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=y_pred, logits=y_batch)) \
+    loss=tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=y_batch, logits=y_pred)) \
                 + 0.5*regularization * tf.nn.l2_loss(w)
     
 ########################3############# 2.1.1 #######################################
@@ -101,20 +100,20 @@ with LR_1_1.as_default():
                     print('Epoch: {:4}, Loss: {:5f}, Duration: {:2f}'. \
                           format(int(iter_counter/total_batches), loss_value, duration))                        
                     loss_array_train[idx, int(iter_counter/total_batches)] = loss_value
-                    y_pred = tf.sigmoid(tf.matmul(X_batch, w) + b)
-                    y_val_pred = tf.sigmoid(tf.matmul(X_val, w) + b)
+                    y_pred = tf.matmul(X_batch, w) + b #??????????????????????????????????
+                    y_val_pred = tf.matmul(X_val, w) + b
                     loss_array_val[idx, int(iter_counter/total_batches)] = sess.run( \
                         tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits\
-                                       (labels=y_val_pred, logits=y_val)) \
+                                       (labels=y_val, logits=y_val_pred)) \
                         + 0.5*regularization * tf.nn.l2_loss(w))
                     acc_array_train[idx, int(iter_counter/total_batches)] = \
-                        sess.run(tf.count_nonzero(tf.equal(tf.round(y_pred), y_batch)))
+                        sess.run(tf.count_nonzero(tf.equal(tf.round(tf.sigmoid(y_pred)), y_batch)))
                     acc_array_val[idx, int(iter_counter/total_batches)] = \
-                        sess.run(tf.count_nonzero(tf.equal(tf.round(y_val_pred), y_val)))
+                        sess.run(tf.count_nonzero(tf.equal(tf.round(tf.sigmoid(y_val_pred)), y_val)))
             
             # test accuracy
-            y_test_pred = tf.sigmoid(tf.matmul(X_test, w) + b)
-            test_acc = tf.count_nonzero(tf.equal(tf.round(y_test_pred), y_test))
+            y_test_pred = tf.matmul(X_test, w) + b
+            test_acc = tf.count_nonzero(tf.equal(tf.round(tf.sigmoid(y_test_pred)), y_test))
             print("the test accuracy is: ")
             print(sess.run(test_acc))
                                     
@@ -169,8 +168,8 @@ with LR_1_1.as_default():
                     loss_adam[idx, int(iter_counter/total_batches)] = loss_value
             
             # test accuracy
-            y_test_pred = tf.sigmoid(tf.matmul(X_test, w) + b)
-            test_acc = tf.count_nonzero(tf.equal(tf.round(y_test_pred), y_test))
+            y_test_pred = tf.matmul(X_test, w) + b
+            test_acc = tf.count_nonzero(tf.equal(tf.round(tf.sigmoid(y_test_pred)), y_test))
             print("the test accuracy using Adam optimizer is: ")
             print(sess.run(test_acc))
     
