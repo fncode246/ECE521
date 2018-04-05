@@ -42,10 +42,10 @@ def grab_batches(trainData, trainTarget, batch_size):
     
 # Hyperparam
 learning_rate = 0.005
-n_epochs = 800
+n_epochs = 25
 batch_size = 500
 weight_decays=[0]
-drop = 1
+drop = 0
     
 # Setup training 
 n_dim = 28*28
@@ -113,15 +113,16 @@ with tf.Session() as sess:
     plt.show()
     
     # Visualize weights
-    for ii in range(0,1000):
-        weight_array=tf.reshape(W1[:,ii],[28,28])
-        scale=255/sess.run(tf.reduce_max(tf.abs(weight_array)))
+    sample_num=100 
+    shuffled_idx = np.random.permutation(1000)
+    scale=255/sess.run(tf.reduce_max(tf.abs(W1)))
+    for ii in range(0,sample_num):
+        weight_array=tf.reshape(W1[:,shuffled_idx[ii]],[28,28])
         img = Image.fromarray(scale*sess.run(weight_array)).convert('L')
-        img.save('D50%\\Unit'+str(ii+1)+'.png')
-#        arr = np.asarray(img)
-#        plt.imshow(arr, cmap='gray')
+        arr = np.asarray(img)
+        plt.subplot(10,10,ii+1).axis('off')
+        plt.imshow(arr, cmap='gray')
     #print(sess.run(W1))
-    
     
     
     
